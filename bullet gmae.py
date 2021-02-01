@@ -27,6 +27,7 @@ heart_image.set_colorkey((255,255,255))
 font = pygame.font.SysFont("notosanscjkkr",400)
 S = pygame.font.SysFont("notosanscjkkr",300)
 E = pygame.font.SysFont("notosanscjkkr",200)
+T = pygame.font.SysFont("notosansmonocjkkrregular",50)
 #텍스트들
 text1 = font.render("1",True,(0,0,0))
 text2 = font.render("2",True,(0,0,0))
@@ -35,13 +36,15 @@ start = S.render("START",True,(0,0,0))
 gameover = E.render("GAME OVER",True,(0,0,0))
 
 #총알을 일정 좌표 뒤 생성하는 코드
-bullet_limit = 150
+bullet_limit = 50
 #총알을 일정 갯수 만큼만 소환하게 하는 코드
-spawn_limit = 2
+spawn_limit = 6
 #위에 리미트를 증가하는 만큼 풀리게 하는 코드
 limit = 0
 #생명 기본 값
 draw_heart = 5
+#타이머 변수
+timer = 0
 
 # 총알 구성
 class Bullet:
@@ -49,23 +52,51 @@ class Bullet:
     def __init__(self): 
         self.x = random.randint(0,980)
         self.y = -60
+        #총알이 내려가는 속도
+        self.speed = 2 + (limit / 10)/100
         #1일 경우 속도가 빠른 총알 생성
-        self.fast = random.randint(0,20)
+        #10일 경우 속도가 변하는 총알 생성
+        self.fast = random.randint(1,10)
         #1일 경우 x좌표가 마구 움직이는 총알 생성
-        self.potal = random.randint(0,50)
-        #위에 x좌표 움직이는 기준
-        self.pmove = random.randint(10,100)
-        self.potalr = 0
+        self.potal = random.randint(1,20)
+        #일정 y좌표마다 x좌표를 움직이거나 속도를 바꿔주는 변수
+        self.mp = random.randint(50,200)
+        #일정 좌표마다 초기화
+        self.r = 0
+        #1일 경우 유도탄 생성
+        self.missile = random.randint(1,15)
 
-    #slef.fast가 1일 경우 빠른 y좌표를 8씩 이동 시키고 아니라면 2씩 이동
-    def move(self):
+    def move(self,human):
+        #fast가 1일 경우 속도를 8로 바꿈
         if self.fast == 1:
-            self.y += 8
-        elif self.fast == 20:
-            self.y += 0.5
-        else:
-            self.y += 2
-        if self.potal == 1:
+            self.speed = 8
+
+        #fast가 10이고 r이 mp보다 크거나 같으면 랜덤으로 속도 변경
+        elif self.fast == 10 and self.r >= self.mp:
+            self.speed = random.randint(1,10)
+            self.r = 0
+
+        #potal이 1이고 r이 mp보다 크거나 같으면 x좌표 랜덤으로 변경
+        if self.potal == 1 and self.r >= self.mp:
+            self.x = random.randint(0,980)
+            self.r = 0
+
+        if self.missile == 1 and self.potal != 1:
+            #y좌표 400까지는 사람을 따라다님
+            if self.y < 400:
+                self.x = human.x
+
+            #y좌표가 400 초과 420 미만이면 속도를 0.5로 변경
+            elif self.y > 400 and self.y < 430:
+                self.speed = 1
+
+            #y좌표가 420이 넘으면 속도를 10으로 변
+            elif self.y > 430:
+                self.speed = 10
+
+        #y를 변경
+        self.y += self.speed
+        self.r += self.speed
 
     #그리기
     def draw(self):
@@ -115,7 +146,6 @@ class Heart:
 
 #텍스트 그리는 함수
 def textDraw(x,y,text):
-    screen.fill((255,255,255))
     screen.blit(text,(x,y))
     pygame.display.update()
 
@@ -128,26 +158,34 @@ human = Human()
 #생명 생성
 heart = Heart()
 
-#게임 시작 전 준비 타임 
+#게임 시작 전 준비 타임
+screen.fill((255,255,255))
 textDraw(420,220,text3)
 time.sleep(1)
 pygame.init()
 
+screen.fill((255,255,255))
 textDraw(420,220,text2)
 time.sleep(1)
 pygame.init()
 
+screen.fill((255,255,255))
 textDraw(420,220,text1)
 time.sleep(1)
 pygame.init()
 
+screen.fill((255,255,255))
 textDraw(170,220,start)
 time.sleep(0.5)
 pygame.init()
 
+#버티는 시간 측정
+timer = time.time()
+
 while 1:
     #1초에 120번 반복
     clock.tick(120)
+    pc = 0
     
     for event in pygame.event.get():
         if event.type == QUIT:
@@ -156,7 +194,7 @@ while 1:
     pressed_keys = pygame.key.get_pressed()
 
     #총알의 갯수가 2 + @보다 적거나 총알의  y좌표가 일정 수보다 높으면 총알 생성
-    if len(bullets) < spawn_limit + (limit/30)/5 and bullets[len(bullets)-1].bullet_spawn():
+    if len(bullets) < spawn_limit + (limit/70)/5 and bullets[len(bullets)-1].bullet_spawn():
         bullets.append(Bullet())
         limit += 1
     screen.blit(text3,(370,240))
@@ -172,7 +210,7 @@ while 1:
     i = 0
     while i < len(bullets):
         #총알 이동 및 그리기
-        bullets[i].move()
+        bullets[i].move(human)
         bullets[i].draw()
         
         #총알이 화면 밖으로 나가면 삭제
@@ -192,7 +230,11 @@ while 1:
 
     #생명이 0일 경우 화면에 "GAME OVER"을 쓰고 프로그램 정지
     if draw_heart == 0:
+        pc = round(time.time() - timer, 3)
+        tp = T.render("play time : " +str(pc),True,(0,0,0))
+        screen.fill((255,255,255))
         textDraw(80,240,gameover)
+        textDraw(300,450,tp)
         time.sleep(5)
         pygame.init()
         break
