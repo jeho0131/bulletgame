@@ -78,7 +78,9 @@ class Bullet:
 
         #potal이 1이고 r이 mp보다 크거나 같으면 x좌표 랜덤으로 변경
         if self.potal == 1 and self.r >= self.mp:
-            self.x = random.randint(0,980)
+            if self.y < 420:
+                self.x = random.randint(0,980)
+                self.r = 0
             self.r = 0
 
         if self.missile == 1 and self.potal != 1:
@@ -230,8 +232,12 @@ while 1:
 
     #생명이 0일 경우 화면에 "GAME OVER"을 쓰고 프로그램 정지
     if draw_heart == 0:
+        #시작 부터 현재까지에 시간 계산
         pc = round(time.time() - timer, 3)
-        tp = T.render("play time : " +str(pc),True,(0,0,0))
+        pcn = str(round(pc % 1, 3))
+        pcm = str(round(pc / 60))
+        tp = T.render("play time [  "+pcm+" : "+str(round(pc%60))+" . "+pcn[2:]+"  ] ",True,(0,0,0))
+        
         screen.fill((255,255,255))
         textDraw(80,240,gameover)
         textDraw(300,450,tp)
